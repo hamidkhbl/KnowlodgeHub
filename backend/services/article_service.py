@@ -1,0 +1,106 @@
+from typing import Optional
+
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from models.article import Article, ArticleStatus
+from models.user import User, UserRole
+from schemas.article import CreateArticleRequest, UpdateArticleRequest
+
+
+def _get_article_in_org(article_id: int, organization_id: int, db: Session) -> Article:
+    """Fetch an article scoped to the org, or raise 404."""
+    article = (
+        db.query(Article)
+        .filter(Article.id == article_id, Article.organization_id == organization_id)
+        .first()
+    )
+    if not article:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+    return article
+
+
+def _is_privileged(user: User) -> bool:
+    return user.role in (UserRole.ORG_ADMIN, UserRole.MANAGER)
+
+
+def get_articles(
+    current_user: User,
+    db: Session,
+    q: Optional[str] = None,
+    article_status: Optional[ArticleStatus] = None,
+    department_id: Optional[int] = None,
+) -> list[Article]:
+    query = db.query(Article).filter(Article.organization_id == current_user.organization_id)
+
+    # EMPLOYEE can only see published articles in the list
+    if current_user.role == UserRole.EMPLOYEE:
+        query = query.filter(Article.status == ArticleStatus.PUBLISHED)
+
+    if article_status is not None:
+        query = query.filter(Article.status == article_status)
+
+    if department_id is not None:
+        query = query.filter(Article.department_id == department_id)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Article.title.ilike(like)) | (Article.content.ilike(like))
+        )
+
+    return query.all()
+
+
+def get_article(article_id: int, current_user: User, db: Session) -> Article:
+    article = _get_article_in_org(article_id, current_user.organization_id, db)
+
+    # EMPLOYEE can only see published articles or their own drafts
+    if current_user.role == UserRole.EMPLOYEE:
+        if article.status != ArticleStatus.PUBLISHED and article.author_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+
+    return article
+
+
+def create_article(request: CreateArticleRequest, current_user: User, db: Session) -> Article:
+    article = Article(
+        organization_id=current_user.organization_id,
+        author_id=current_user.id,
+        title=request.title,
+        content=request.content,
+        tags=request.tags,
+        status=request.status,
+        department_id=request.department_id,
+    )
+    db.add(article)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def update_article(article_id: int, request: UpdateArticleRequest, current_user: User, db: Session) -> Article:
+    article = _get_article_in_org(article_id, current_user.organization_id, db)
+
+    if not _is_privileged(current_user) and article.author_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only edit your own articles")
+
+    article.title = request.title
+    article.content = request.content
+    article.tags = request.tags
+    article.status = request.status
+    article.department_id = request.department_id
+
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def delete_article(article_id: int, current_user: User, db: Session) -> None:
+    article = _get_article_in_org(article_id, current_user.organization_id, db)
+
+    if not _is_privileged(current_user) and article.author_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own articles")
+
+    db.delete(article)
+    db.commit()
