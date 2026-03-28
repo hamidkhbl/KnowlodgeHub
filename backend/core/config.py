@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-to-a-long-random-secret-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440  # 24 hours
+    log_level: str = "INFO"
+    log_dir: str = "logs"  # empty means console only
 
     model_config = {"env_file": ".env"}
 
