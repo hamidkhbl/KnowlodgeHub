@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from core.database import Base, engine
 import models  # noqa: F401 — ensures all models are registered with Base
-from api.routes import auth
+from api.routes import auth, users
 
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.add_middleware(
 
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
 
 
 @app.get("/api/health")

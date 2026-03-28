@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.security import decode_access_token
-from models.user import User
+from models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -32,3 +32,12 @@ def get_current_user(
         )
 
     return user
+
+
+def require_org_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.ORG_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: ORG_ADMIN role required",
+        )
+    return current_user
