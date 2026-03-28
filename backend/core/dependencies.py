@@ -34,6 +34,10 @@ def get_current_user(
     return user
 
 
+def require_authenticated(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
+
+
 def require_org_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.ORG_ADMIN:
         raise HTTPException(

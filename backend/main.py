@@ -8,7 +8,7 @@ from core.database import Base, engine
 from core.logging_config import setup_logging, get_logger
 from core.middleware import RequestLoggingMiddleware
 import models  # noqa: F401 — ensures all models are registered with Base
-from api.routes import auth, users
+from api.routes import auth, users, departments
 
 setup_logging()
 logger = get_logger(__name__)
@@ -45,6 +45,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(departments.router, prefix="/api")
 
 
 @app.get("/api/health")
