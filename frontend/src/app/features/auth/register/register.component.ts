@@ -80,7 +80,7 @@ import { AuthService } from '../../../core/services/auth.service';
               data-testid="register-password"
             />
             @if (form.get('password')?.invalid && form.get('password')?.touched) {
-              <span class="field-error">Password is required</span>
+              <span class="field-error">Password must be at least 8 characters.</span>
             }
           </div>
 
@@ -164,7 +164,7 @@ export class RegisterComponent {
     organizationSlug: ['', Validators.required],
     adminName: ['', Validators.required],
     adminEmail: ['', [Validators.required, Validators.email]],
-    password: ['', Validators.required],
+    password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
   loading = false;

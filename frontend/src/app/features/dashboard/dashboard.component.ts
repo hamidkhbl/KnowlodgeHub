@@ -10,7 +10,7 @@ import { DashboardService, DashboardStats } from '../../core/services/dashboard.
   template: `
     <div class="dashboard">
       <h1>Dashboard</h1>
-      <p class="welcome">Welcome, <strong>{{ currentUser?.name }}</strong></p>
+      <p class="welcome" data-testid="dashboard-welcome">Welcome, <strong>{{ currentUser?.name }}</strong></p>
 
       @if (loading) {
         <p class="status-msg" data-testid="dashboard-loading">Loading...</p>

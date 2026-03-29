@@ -14,11 +14,15 @@ import { User } from '../../core/models/user.model';
       <h1>Users</h1>
 
       <!-- Users Table -->
+      @if (loading) {
+        <p class="status-msg" data-testid="users-loading">Loading...</p>
+      }
+
       @if (loadError) {
         <p class="error-msg" data-testid="users-load-error">{{ loadError }}</p>
       }
 
-      @if (!loadError) {
+      @if (!loading && !loadError) {
         <table class="data-table" data-testid="users-table">
           <thead>
             <tr>
@@ -205,6 +209,7 @@ import { User } from '../../core/models/user.model';
     button[type="submit"]:hover:not(:disabled) { background: #1d4ed8; }
     button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    .status-msg { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
     .error-msg { color: #dc2626; font-size: 0.9rem; margin-bottom: 1rem; }
     .success-msg { color: #16a34a; font-size: 0.9rem; margin-bottom: 1rem; }
   `],
@@ -216,6 +221,7 @@ export class UsersComponent implements OnInit {
 
   users: User[] = [];
   departments: Department[] = [];
+  loading = true;
   loadError: string | null = null;
   submitError: string | null = null;
   submitSuccess = false;
@@ -231,8 +237,14 @@ export class UsersComponent implements OnInit {
 
   ngOnInit(): void {
     this.userService.getUsers().subscribe({
-      next: users => (this.users = users),
-      error: () => (this.loadError = 'Failed to load users.'),
+      next: users => {
+        this.users = users;
+        this.loading = false;
+      },
+      error: () => {
+        this.loadError = 'Failed to load users.';
+        this.loading = false;
+      },
     });
 
     this.departmentService.getDepartments().subscribe({

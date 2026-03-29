@@ -13,11 +13,15 @@ import { AuthService } from '../../core/services/auth.service';
       <h1>Departments</h1>
 
       <!-- Departments Table -->
+      @if (loading) {
+        <p class="status-msg" data-testid="departments-loading">Loading...</p>
+      }
+
       @if (loadError) {
         <p class="error-msg" data-testid="departments-load-error">{{ loadError }}</p>
       }
 
-      @if (!loadError) {
+      @if (!loading && !loadError) {
         <table class="data-table" data-testid="departments-table">
           <thead>
             <tr>
@@ -143,6 +147,7 @@ import { AuthService } from '../../core/services/auth.service';
     button[type="submit"]:hover:not(:disabled) { background: #1d4ed8; }
     button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    .status-msg { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
     .error-msg { color: #dc2626; font-size: 0.9rem; margin-bottom: 1rem; }
     .success-msg { color: #16a34a; font-size: 0.9rem; margin-bottom: 1rem; }
   `],
@@ -153,6 +158,7 @@ export class DepartmentsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   departments: Department[] = [];
+  loading = true;
   loadError: string | null = null;
   submitError: string | null = null;
   submitSuccess = false;
@@ -168,8 +174,14 @@ export class DepartmentsComponent implements OnInit {
 
   ngOnInit(): void {
     this.departmentService.getDepartments().subscribe({
-      next: depts => (this.departments = depts),
-      error: () => (this.loadError = 'Failed to load departments.'),
+      next: depts => {
+        this.departments = depts;
+        this.loading = false;
+      },
+      error: () => {
+        this.loadError = 'Failed to load departments.';
+        this.loading = false;
+      },
     });
   }
 

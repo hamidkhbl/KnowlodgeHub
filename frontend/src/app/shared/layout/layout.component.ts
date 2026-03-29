@@ -10,7 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="app-shell">
       <nav class="sidebar">
         <div class="sidebar-header">
-          <span class="app-name">KnowledgeHub</span>
+          <span class="app-name" data-testid="nav-app-title">KnowledgeHub</span>
         </div>
 
         <ul class="nav-links">

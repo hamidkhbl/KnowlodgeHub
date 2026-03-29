@@ -11,7 +11,7 @@ import { DepartmentService, Department } from '../../../core/services/department
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="page">
-      <h1>{{ article ? 'Edit Article' : 'Create Article' }}</h1>
+      <h1 data-testid="article-form-heading">{{ article ? 'Edit Article' : 'Create Article' }}</h1>
 
       @if (submitError) {
         <p class="error-msg" data-testid="article-form-error">{{ submitError }}</p>
@@ -84,7 +84,7 @@ import { DepartmentService, Department } from '../../../core/services/department
           >
             {{ submitting ? 'Saving...' : 'Save Article' }}
           </button>
-          <button type="button" class="btn-secondary" (click)="onCancel()">
+          <button type="button" class="btn-secondary" (click)="onCancel()" data-testid="article-cancel-button">
             Cancel
           </button>
         </div>

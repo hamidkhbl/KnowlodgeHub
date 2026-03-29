@@ -54,9 +54,9 @@ import { AuthService } from '../../../core/services/auth.service';
           <span class="status-badge status-{{ article.status }}" data-testid="article-detail-status">
             {{ article.status }}
           </span>
-          <span class="meta-item">{{ getDepartmentName(article.department_id) }}</span>
-          <span class="meta-item">{{ getAuthorLabel(article.author_id) }}</span>
-          <span class="meta-item">{{ article.created_at | date:'mediumDate' }}</span>
+          <span class="meta-item" data-testid="article-detail-department">{{ getDepartmentName(article.department_id) }}</span>
+          <span class="meta-item" data-testid="article-detail-author">{{ getAuthorLabel(article.author_id) }}</span>
+          <span class="meta-item" data-testid="article-detail-date">{{ article.created_at | date:'mediumDate' }}</span>
         </div>
 
         @if (article.tags) {
