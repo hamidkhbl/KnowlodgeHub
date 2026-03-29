@@ -92,7 +92,7 @@ const FLIP_DURATION = 200; // ms
                 class="tree-row"
                 [class.root-row]="node.isRoot"
                 [class.dept-row]="!node.isRoot"
-                [class.just-moved]="node.id === justMovedId"
+                [class.just-moved]="node.id !== null && justMovedIds.has(node.id)"
                 [style.padding-left.px]="node.depth * 28 + 12"
                 [attr.data-testid]="node.isRoot ? 'organization-root-node' : 'department-node'"
                 (cdkDragStarted)="onDragStarted(node)"
@@ -412,7 +412,7 @@ export class DepartmentsComponent implements OnInit {
 
   draggingNodeId: number | null = null;
   dragOverId: number | 'root' | null = null;
-  justMovedId: number | null = null;
+  justMovedIds = new Set<number>();
 
   get isAdmin(): boolean {
     return this.authService.currentUser?.role === 'ORG_ADMIN';
@@ -521,7 +521,8 @@ export class DepartmentsComponent implements OnInit {
 
     const snapshot = this.snapshotPositions();
     this.swapSiblings(node.id as number, s[idx - 1].id);
-    requestAnimationFrame(() => this.playFlip(snapshot, node.id as number));
+    this.triggerMoveSuccess(node.id as number);
+    requestAnimationFrame(() => this.playFlip(snapshot));
   }
 
   moveDown(node: FlatNode): void {
@@ -531,7 +532,8 @@ export class DepartmentsComponent implements OnInit {
 
     const snapshot = this.snapshotPositions();
     this.swapSiblings(node.id as number, s[idx + 1].id);
-    requestAnimationFrame(() => this.playFlip(snapshot, node.id as number));
+    this.triggerMoveSuccess(node.id as number);
+    requestAnimationFrame(() => this.playFlip(snapshot));
   }
 
   private swapSiblings(idA: number, idB: number): void {
@@ -554,7 +556,7 @@ export class DepartmentsComponent implements OnInit {
     return map;
   }
 
-  private playFlip(before: Map<string, number>, movedId: number): void {
+  private playFlip(before: Map<string, number>): void {
     // Clear any in-progress FLIP from a previous rapid click
     document.querySelectorAll<HTMLElement>('[data-flip-key]').forEach(el => {
       el.style.transition = 'none';
@@ -587,20 +589,26 @@ export class DepartmentsComponent implements OnInit {
       el.addEventListener('transitionend', () => {
         el.style.transition = '';
         el.style.transform = '';
-
-        if (el.dataset['flipKey'] === String(movedId)) {
-          // setTimeout re-enters Angular zone so the binding update triggers change detection
-          setTimeout(() => this.triggerMoveSuccess(movedId), 0);
-        }
       }, { once: true });
     });
   }
 
   private triggerMoveSuccess(id: number): void {
-    this.justMovedId = id;
-    // Snap ON (transition:none via .just-moved rule), then after a hold remove the class
-    // so the base .dept-row transition fades background-color + box-shadow back out
-    setTimeout(() => { this.justMovedId = null; }, 900);
+    // Collect the moved node plus all its visible descendants
+    const ids = new Set<number>();
+    const startIdx = this.visibleNodes.findIndex(n => n.id === id);
+    if (startIdx === -1) return;
+
+    const rootDepth = this.visibleNodes[startIdx].depth;
+    ids.add(id);
+    for (let i = startIdx + 1; i < this.visibleNodes.length; i++) {
+      const n = this.visibleNodes[i];
+      if (n.depth <= rootDepth) break;
+      if (n.id !== null) ids.add(n.id as number);
+    }
+
+    this.justMovedIds = ids;
+    setTimeout(() => { this.justMovedIds = new Set(); }, 900);
   }
 
   // ── Inline add ────────────────────────────────────────────────────────────
