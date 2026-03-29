@@ -92,6 +92,7 @@ const FLIP_DURATION = 200; // ms
                 class="tree-row"
                 [class.root-row]="node.isRoot"
                 [class.dept-row]="!node.isRoot"
+                [class.just-moved]="node.id === justMovedId"
                 [style.padding-left.px]="node.depth * 28 + 12"
                 [attr.data-testid]="node.isRoot ? 'organization-root-node' : 'department-node'"
                 (cdkDragStarted)="onDragStarted(node)"
@@ -221,15 +222,10 @@ const FLIP_DURATION = 200; // ms
     .drop-zone:last-child { border-bottom: none; }
     .drop-zone.drag-over { background: #eff6ff; }
 
-    /* FLIP highlight: applied briefly after a successful move */
-    .drop-zone.node-moved .tree-row {
-      background: #f0fdf4 !important;
-      transition: background 500ms ease;
-    }
-
     /* Respect user motion preferences — also makes headless test runs deterministic */
     @media (prefers-reduced-motion: reduce) {
       .drop-zone { transition: none !important; transform: none !important; }
+      .dept-row { transition: none !important; }
     }
 
     .tree-row {
@@ -244,7 +240,18 @@ const FLIP_DURATION = 200; // ms
       cursor: default;
     }
     .root-row { background: #f8fafc; }
+    .dept-row {
+      /* Smooth fade-out for the just-moved highlight */
+      transition: background-color 0.9s ease, box-shadow 0.9s ease;
+    }
     .dept-row:hover { background: #fafafa; }
+
+    /* Success indicator: green left accent + tinted background, fades out on class removal */
+    .dept-row.just-moved {
+      background-color: #dcfce7;
+      box-shadow: inset 3px 0 0 #16a34a;
+      transition: none; /* snap ON instantly, fade only on removal */
+    }
 
     .drag-handle {
       cursor: grab;
@@ -405,6 +412,7 @@ export class DepartmentsComponent implements OnInit {
 
   draggingNodeId: number | null = null;
   dragOverId: number | 'root' | null = null;
+  justMovedId: number | null = null;
 
   get isAdmin(): boolean {
     return this.authService.currentUser?.role === 'ORG_ADMIN';
@@ -580,13 +588,19 @@ export class DepartmentsComponent implements OnInit {
         el.style.transition = '';
         el.style.transform = '';
 
-        // Subtle success highlight on the moved department's row
         if (el.dataset['flipKey'] === String(movedId)) {
-          el.classList.add('node-moved');
-          setTimeout(() => el.classList.remove('node-moved'), 550);
+          // setTimeout re-enters Angular zone so the binding update triggers change detection
+          setTimeout(() => this.triggerMoveSuccess(movedId), 0);
         }
       }, { once: true });
     });
+  }
+
+  private triggerMoveSuccess(id: number): void {
+    this.justMovedId = id;
+    // Snap ON (transition:none via .just-moved rule), then after a hold remove the class
+    // so the base .dept-row transition fades background-color + box-shadow back out
+    setTimeout(() => { this.justMovedId = null; }, 900);
   }
 
   // ── Inline add ────────────────────────────────────────────────────────────
@@ -702,6 +716,7 @@ export class DepartmentsComponent implements OnInit {
     this.departmentService.moveDepartment(dragged.id as number, {
       new_parent_department_id: newParentId,
     }).subscribe({
+      next: () => this.triggerMoveSuccess(dragged.id as number),
       error: err => {
         this.departments = this.departments.map(d =>
           d.id === dragged.id ? { ...d, parent_department_id: prevParentId } : d
