@@ -8,7 +8,6 @@ import { debounceTime, distinctUntilChanged, switchMap, takeUntil, startWith } f
 
 import { ArticleService, Article } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
-import { AuthService } from '../../../core/services/auth.service';
 import { ArticleCreateDialogComponent } from '../article-create-dialog/article-create-dialog.component';
 
 @Component({
@@ -81,8 +80,8 @@ import { ArticleCreateDialogComponent } from '../article-create-dialog/article-c
                   </span>
                 </td>
                 <td>{{ getDepartmentName(article.department_id) }}</td>
-                <td>{{ getAuthorLabel(article.author_id) }}</td>
-                <td>{{ article.created_at | date:'mediumDate' }}</td>
+                <td>{{ article.author_name }}</td>
+                <td>{{ article.created_at | date:'medium' }}</td>
               </tr>
             } @empty {
               <tr>
@@ -178,7 +177,6 @@ import { ArticleCreateDialogComponent } from '../article-create-dialog/article-c
 export class ArticlesListComponent implements OnInit, OnDestroy {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
-  private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly destroy$ = new Subject<void>();
 
@@ -241,9 +239,5 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
     return this.departments.find(d => d.id === departmentId)?.name ?? '—';
   }
 
-  getAuthorLabel(authorId: number): string {
-    const currentUser = this.authService.currentUser;
-    if (currentUser?.id === authorId) return currentUser.name;
-    return `#${authorId}`;
-  }
+
 }

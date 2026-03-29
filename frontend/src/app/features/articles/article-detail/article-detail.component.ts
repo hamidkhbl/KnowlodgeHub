@@ -55,8 +55,8 @@ import { AuthService } from '../../../core/services/auth.service';
             {{ article.status }}
           </span>
           <span class="meta-item" data-testid="article-detail-department">{{ getDepartmentName(article.department_id) }}</span>
-          <span class="meta-item" data-testid="article-detail-author">{{ getAuthorLabel(article.author_id) }}</span>
-          <span class="meta-item" data-testid="article-detail-date">{{ article.created_at | date:'mediumDate' }}</span>
+          <span class="meta-item" data-testid="article-detail-author">{{ article.author_name }}</span>
+          <span class="meta-item" data-testid="article-detail-date">{{ article.created_at | date:'medium' }}</span>
         </div>
 
         @if (article.tags) {
@@ -213,13 +213,7 @@ export class ArticleDetailComponent implements OnInit {
     return this.departments.find(d => d.id === departmentId)?.name ?? '—';
   }
 
-  getAuthorLabel(authorId: number): string {
-    const currentUser = this.authService.currentUser;
-    if (currentUser?.id === authorId) return currentUser.name;
-    return `#${authorId}`;
-  }
-
-  parseTags(tags: string): string[] {
+parseTags(tags: string): string[] {
     return tags.split(',').map(t => t.trim()).filter(Boolean);
   }
 }

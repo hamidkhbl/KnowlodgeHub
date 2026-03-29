@@ -12,6 +12,7 @@ export interface Article {
   status: 'DRAFT' | 'PUBLISHED';
   department_id: number | null;
   author_id: number;
+  author_name: string;
   organization_id: number;
   created_at: string;
   updated_at: string;
