@@ -10,6 +10,7 @@ import {
   DepartmentDeleteDialogComponent,
   DepartmentDeleteDialogData,
 } from './department-delete-dialog/department-delete-dialog.component';
+import { DepartmentTreeSelectComponent } from '../../shared/components/department-tree-select/department-tree-select.component';
 
 export interface FlatNode {
   id: number | null;
@@ -31,7 +32,7 @@ const FLIP_DURATION = 200; // ms
 
 @Component({
   selector: 'app-departments',
-  imports: [CommonModule, ReactiveFormsModule, DragDropModule],
+  imports: [CommonModule, ReactiveFormsModule, DragDropModule, DepartmentTreeSelectComponent],
   template: `
     <div class="page">
       <div class="page-header">
@@ -55,23 +56,37 @@ const FLIP_DURATION = 200; // ms
 
             @if (pending && pending.insertAfterIndex === i) {
               <div class="inline-add-row" [style.padding-left.px]="pending.depth * 28 + 12">
-                <input
-                  type="text"
-                  [formControl]="inlineNameControl"
-                  placeholder="Department name"
-                  data-testid="department-inline-name"
-                  class="inline-input"
-                  (keydown.enter)="saveInline()"
-                  (keydown.escape)="cancelInline()"
-                  autofocus
-                />
-                <button
-                  class="btn-save"
-                  (click)="saveInline()"
-                  [disabled]="inlineNameControl.invalid || saving"
-                  data-testid="save-inline-department"
-                >{{ saving ? '…' : 'Save' }}</button>
-                <button class="btn-cancel" (click)="cancelInline()">Cancel</button>
+                <div class="inline-add-fields">
+                  <div class="inline-name-row">
+                    <input
+                      type="text"
+                      [formControl]="inlineNameControl"
+                      placeholder="Department name"
+                      data-testid="department-inline-name"
+                      class="inline-input"
+                      (keydown.enter)="saveInline()"
+                      (keydown.escape)="cancelInline()"
+                      autofocus
+                    />
+                    <button
+                      class="btn-save"
+                      (click)="saveInline()"
+                      [disabled]="inlineNameControl.invalid || saving"
+                      data-testid="save-inline-department"
+                    >{{ saving ? '…' : 'Save' }}</button>
+                    <button class="btn-cancel" (click)="cancelInline()">Cancel</button>
+                  </div>
+                  <div class="inline-parent-row">
+                    <span class="inline-parent-label">Parent:</span>
+                    <app-department-tree-select
+                      [formControl]="inlineParentControl"
+                      [departments]="departments"
+                      [orgName]="orgName"
+                      [allowRoot]="true"
+                      data-testid="parent-department-select"
+                    ></app-department-tree-select>
+                  </div>
+                </div>
               </div>
             }
 
@@ -156,7 +171,7 @@ const FLIP_DURATION = 200; // ms
                         (click)="startInlineAdd(node, i)"
                         data-testid="add-sub-department"
                         title="Add sub-department"
-                      >+ Sub-Department</button>
+                      >+</button>
                       <button
                         class="btn-icon btn-delete"
                         (click)="openDeleteDialog(node)"
@@ -176,23 +191,37 @@ const FLIP_DURATION = 200; // ms
 
           @if (pending && pending.insertAfterIndex === visibleNodes.length) {
             <div class="inline-add-row" [style.padding-left.px]="pending.depth * 28 + 12">
-              <input
-                type="text"
-                [formControl]="inlineNameControl"
-                placeholder="Department name"
-                data-testid="department-inline-name"
-                class="inline-input"
-                (keydown.enter)="saveInline()"
-                (keydown.escape)="cancelInline()"
-                autofocus
-              />
-              <button
-                class="btn-save"
-                (click)="saveInline()"
-                [disabled]="inlineNameControl.invalid || saving"
-                data-testid="save-inline-department"
-              >{{ saving ? '…' : 'Save' }}</button>
-              <button class="btn-cancel" (click)="cancelInline()">Cancel</button>
+              <div class="inline-add-fields">
+                <div class="inline-name-row">
+                  <input
+                    type="text"
+                    [formControl]="inlineNameControl"
+                    placeholder="Department name"
+                    data-testid="department-inline-name"
+                    class="inline-input"
+                    (keydown.enter)="saveInline()"
+                    (keydown.escape)="cancelInline()"
+                    autofocus
+                  />
+                  <button
+                    class="btn-save"
+                    (click)="saveInline()"
+                    [disabled]="inlineNameControl.invalid || saving"
+                    data-testid="save-inline-department"
+                  >{{ saving ? '…' : 'Save' }}</button>
+                  <button class="btn-cancel" (click)="cancelInline()">Cancel</button>
+                </div>
+                <div class="inline-parent-row">
+                  <span class="inline-parent-label">Parent:</span>
+                  <app-department-tree-select
+                    [formControl]="inlineParentControl"
+                    [departments]="departments"
+                    [orgName]="orgName"
+                    [allowRoot]="true"
+                    data-testid="parent-department-select"
+                  ></app-department-tree-select>
+                </div>
+              </div>
             </div>
           }
 
@@ -328,14 +357,30 @@ const FLIP_DURATION = 200; // ms
     .btn-delete:hover { color: #dc2626; background: #fee2e2; }
 
     .inline-add-row {
+      padding: 0.5rem 0.75rem 0.5rem 0;
+      background: #f0f9ff;
+      border-bottom: 1px solid #bae6fd;
+    }
+    .inline-add-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .inline-name-row {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding-top: 0.4rem;
-      padding-bottom: 0.4rem;
-      padding-right: 0.75rem;
-      background: #f0f9ff;
-      border-bottom: 1px solid #bae6fd;
+    }
+    .inline-parent-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .inline-parent-label {
+      font-size: 0.78rem;
+      color: #64748b;
+      white-space: nowrap;
+      min-width: 3.5rem;
     }
     .inline-input {
       flex: 1;
@@ -409,6 +454,7 @@ export class DepartmentsComponent implements OnInit {
 
   pending: PendingAdd | null = null;
   inlineNameControl = this.fb.control('', Validators.required);
+  inlineParentControl = this.fb.control<number | null>(null);
 
   draggingNodeId: number | null = null;
   dragOverId: number | 'root' | null = null;
@@ -416,6 +462,10 @@ export class DepartmentsComponent implements OnInit {
 
   get isAdmin(): boolean {
     return this.authService.currentUser?.role === 'ORG_ADMIN';
+  }
+
+  get orgName(): string {
+    return this.authService.currentUser?.organization_name ?? 'Organization';
   }
 
   ngOnInit(): void {
@@ -628,11 +678,9 @@ export class DepartmentsComponent implements OnInit {
       else break;
     }
 
-    this.pending = {
-      parentId: node.isRoot ? null : (node.id as number),
-      depth: node.depth + 1,
-      insertAfterIndex,
-    };
+    const parentId = node.isRoot ? null : (node.id as number);
+    this.pending = { parentId, depth: node.depth + 1, insertAfterIndex };
+    this.inlineParentControl.setValue(parentId);
 
     setTimeout(() => {
       document.querySelector<HTMLInputElement>('[data-testid="department-inline-name"]')?.focus();
@@ -645,7 +693,7 @@ export class DepartmentsComponent implements OnInit {
     this.saving = true;
     this.actionError = null;
     const name = this.inlineNameControl.value!.trim();
-    const parentId = this.pending.parentId;
+    const parentId = this.inlineParentControl.value ?? null;
 
     this.departmentService.createDepartment({ name, parent_department_id: parentId }).subscribe({
       next: newDept => {
@@ -666,6 +714,7 @@ export class DepartmentsComponent implements OnInit {
   cancelInline(): void {
     this.pending = null;
     this.inlineNameControl.reset('');
+    this.inlineParentControl.setValue(null);
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────

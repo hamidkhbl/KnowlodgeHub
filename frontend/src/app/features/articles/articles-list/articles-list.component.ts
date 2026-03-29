@@ -8,11 +8,13 @@ import { debounceTime, distinctUntilChanged, switchMap, takeUntil, startWith } f
 
 import { ArticleService, Article } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ArticleCreateDialogComponent } from '../article-create-dialog/article-create-dialog.component';
+import { DepartmentTreeSelectComponent } from '../../../shared/components/department-tree-select/department-tree-select.component';
 
 @Component({
   selector: 'app-articles-list',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe, DepartmentTreeSelectComponent],
   template: `
     <div class="page">
       <div class="page-header">
@@ -38,12 +40,16 @@ import { ArticleCreateDialogComponent } from '../article-create-dialog/article-c
           <option value="PUBLISHED">Published</option>
         </select>
 
-        <select [formControl]="departmentControl" data-testid="article-department-filter">
-          <option value="">All Departments</option>
-          @for (dept of departments; track dept.id) {
-            <option [value]="dept.id">{{ dept.name }}</option>
-          }
-        </select>
+        <div class="dept-filter-wrap">
+          <app-department-tree-select
+            [formControl]="departmentControl"
+            [departments]="departments"
+            [orgName]="orgName"
+            [allowRoot]="false"
+            placeholder="All Departments"
+            data-testid="article-department-filter"
+          ></app-department-tree-select>
+        </div>
       </div>
 
       <!-- Loading / Error -->
@@ -120,8 +126,10 @@ import { ArticleCreateDialogComponent } from '../article-create-dialog/article-c
       gap: 0.75rem;
       margin-bottom: 1.25rem;
       flex-wrap: wrap;
+      align-items: flex-start;
     }
     .search-input { flex: 1; min-width: 180px; }
+    .dept-filter-wrap { width: 220px; flex-shrink: 0; }
     input, select {
       padding: 0.5rem 0.75rem;
       border: 1px solid #d1d5db;
@@ -177,6 +185,7 @@ import { ArticleCreateDialogComponent } from '../article-create-dialog/article-c
 export class ArticlesListComponent implements OnInit, OnDestroy {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
+  private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly destroy$ = new Subject<void>();
 
@@ -187,7 +196,11 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
 
   searchControl = new FormControl('');
   statusControl = new FormControl('');
-  departmentControl = new FormControl('');
+  departmentControl = new FormControl<number | null>(null);
+
+  get orgName(): string {
+    return this.authService.currentUser?.organization_name ?? 'Organization';
+  }
 
   ngOnInit(): void {
     this.departmentService.getDepartments().subscribe({
@@ -197,7 +210,7 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
     combineLatest([
       this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()),
       this.statusControl.valueChanges.pipe(startWith('')),
-      this.departmentControl.valueChanges.pipe(startWith('')),
+      this.departmentControl.valueChanges.pipe(startWith(null)),
     ]).pipe(
       switchMap(([q, status, deptId]) => {
         this.loading = true;
@@ -205,7 +218,7 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
         const filters: Record<string, string | number> = {};
         if (q) filters['q'] = q;
         if (status) filters['status'] = status;
-        if (deptId) filters['department_id'] = Number(deptId);
+        if (deptId !== null) filters['department_id'] = deptId;
         return this.articleService.getArticles(filters);
       }),
       takeUntil(this.destroy$),
@@ -238,6 +251,4 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
     if (departmentId === null) return '—';
     return this.departments.find(d => d.id === departmentId)?.name ?? '—';
   }
-
-
 }

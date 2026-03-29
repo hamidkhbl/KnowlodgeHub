@@ -7,10 +7,12 @@ import { debounceTime, distinctUntilChanged, switchMap, takeUntil, startWith } f
 
 import { ArticleService, Article } from '../../core/services/article.service';
 import { DepartmentService, Department } from '../../core/services/department.service';
+import { AuthService } from '../../core/services/auth.service';
+import { DepartmentTreeSelectComponent } from '../../shared/components/department-tree-select/department-tree-select.component';
 
 @Component({
   selector: 'app-feed',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, DatePipe, DepartmentTreeSelectComponent],
   template: `
     <div class="feed-page">
       <div class="feed-header">
@@ -26,12 +28,16 @@ import { DepartmentService, Department } from '../../core/services/department.se
           class="search-input"
           data-testid="feed-search-input"
         />
-        <select [formControl]="departmentControl" data-testid="feed-department-filter">
-          <option value="">All Departments</option>
-          @for (dept of departments; track dept.id) {
-            <option [value]="dept.id">{{ dept.name }}</option>
-          }
-        </select>
+        <div class="dept-filter-wrap">
+          <app-department-tree-select
+            [formControl]="departmentControl"
+            [departments]="departments"
+            [orgName]="orgName"
+            [allowRoot]="false"
+            placeholder="All Departments"
+            data-testid="feed-department-filter"
+          ></app-department-tree-select>
+        </div>
       </div>
 
       @if (loading) {
@@ -86,16 +92,18 @@ import { DepartmentService, Department } from '../../core/services/department.se
       gap: 0.75rem;
       margin-bottom: 1.5rem;
       flex-wrap: wrap;
+      align-items: flex-start;
     }
     .search-input { flex: 1; min-width: 180px; }
-    input, select {
+    .dept-filter-wrap { width: 220px; flex-shrink: 0; }
+    input {
       padding: 0.5rem 0.75rem;
       border: 1px solid #d1d5db;
       border-radius: 4px;
       font-size: 0.9rem;
       color: #1e293b;
     }
-    input:focus, select:focus { outline: 2px solid #3b82f6; outline-offset: -1px; }
+    input:focus { outline: 2px solid #3b82f6; outline-offset: -1px; }
 
     .article-list { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -165,6 +173,7 @@ import { DepartmentService, Department } from '../../core/services/department.se
 export class FeedComponent implements OnInit, OnDestroy {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
+  private readonly authService = inject(AuthService);
   private readonly destroy$ = new Subject<void>();
 
   articles: Article[] = [];
@@ -173,7 +182,11 @@ export class FeedComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   searchControl = new FormControl('');
-  departmentControl = new FormControl('');
+  departmentControl = new FormControl<number | null>(null);
+
+  get orgName(): string {
+    return this.authService.currentUser?.organization_name ?? 'Organization';
+  }
 
   ngOnInit(): void {
     this.departmentService.getDepartments().subscribe({
@@ -182,14 +195,14 @@ export class FeedComponent implements OnInit, OnDestroy {
 
     combineLatest([
       this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()),
-      this.departmentControl.valueChanges.pipe(startWith('')),
+      this.departmentControl.valueChanges.pipe(startWith(null)),
     ]).pipe(
       switchMap(([q, deptId]) => {
         this.loading = true;
         this.error = null;
         const filters: Record<string, string | number> = { status: 'PUBLISHED' };
         if (q) filters['q'] = q;
-        if (deptId) filters['department_id'] = Number(deptId);
+        if (deptId !== null) filters['department_id'] = deptId;
         return this.articleService.getArticles(filters);
       }),
       takeUntil(this.destroy$),

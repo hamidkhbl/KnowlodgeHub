@@ -1,14 +1,15 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 
 import { ArticleService, Article } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { DepartmentTreeSelectComponent } from '../../../shared/components/department-tree-select/department-tree-select.component';
 
 @Component({
   selector: 'app-article-create-dialog',
-  imports: [CommonModule, ReactiveFormsModule, MatDialogModule],
+  imports: [ReactiveFormsModule, MatDialogModule, DepartmentTreeSelectComponent],
   template: `
     <div mat-dialog-title data-testid="article-modal">Create Article</div>
 
@@ -58,24 +59,24 @@ import { DepartmentService, Department } from '../../../core/services/department
           <span class="field-hint">Comma-separated tags</span>
         </div>
 
-        <div class="row">
-          <div class="field">
-            <label for="status">Status</label>
-            <select id="status" formControlName="status" data-testid="article-status">
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-            </select>
-          </div>
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status" formControlName="status" data-testid="article-status">
+            <option value="DRAFT">Draft</option>
+            <option value="PUBLISHED">Published</option>
+          </select>
+        </div>
 
-          <div class="field">
-            <label for="department">Department</label>
-            <select id="department" formControlName="department_id" data-testid="article-department">
-              <option [ngValue]="null">None</option>
-              @for (dept of departments; track dept.id) {
-                <option [ngValue]="dept.id">{{ dept.name }}</option>
-              }
-            </select>
-          </div>
+        <div class="field">
+          <label>Department</label>
+          <app-department-tree-select
+            formControlName="department_id"
+            [departments]="departments"
+            [orgName]="orgName"
+            [allowRoot]="false"
+            placeholder="None"
+            data-testid="article-department-select"
+          ></app-department-tree-select>
         </div>
       </form>
     </mat-dialog-content>
@@ -95,12 +96,10 @@ import { DepartmentService, Department } from '../../../core/services/department
   `,
   styles: [`
     [mat-dialog-title] { font-size: 1.1rem; font-weight: 600; color: #1e293b; padding: 1.25rem 1.5rem 0; }
-    mat-dialog-content { padding: 1rem 1.5rem; }
+    mat-dialog-content { padding: 1rem 1.5rem; overflow: visible; }
     mat-dialog-actions { padding: 0.75rem 1.5rem 1.25rem; gap: 0.5rem; }
 
     .dialog-form { display: flex; flex-direction: column; gap: 1rem; }
-    .row { display: flex; gap: 1rem; }
-    .row .field { flex: 1; }
 
     .field { display: flex; flex-direction: column; gap: 0.3rem; }
     label { font-size: 0.875rem; font-weight: 500; color: #374151; }
@@ -146,6 +145,7 @@ import { DepartmentService, Department } from '../../../core/services/department
 export class ArticleCreateDialogComponent implements OnInit {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
+  private readonly authService = inject(AuthService);
   private readonly dialogRef = inject(MatDialogRef<ArticleCreateDialogComponent>);
   private readonly fb = inject(FormBuilder);
 
@@ -160,6 +160,10 @@ export class ArticleCreateDialogComponent implements OnInit {
     status:        ['DRAFT' as 'DRAFT' | 'PUBLISHED', Validators.required],
     department_id: [null as number | null],
   });
+
+  get orgName(): string {
+    return this.authService.currentUser?.organization_name ?? 'Organization';
+  }
 
   ngOnInit(): void {
     this.departmentService.getDepartments().subscribe({

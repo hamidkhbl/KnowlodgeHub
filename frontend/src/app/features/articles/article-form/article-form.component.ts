@@ -1,14 +1,15 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { ArticleService, Article, CreateArticleRequest } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { DepartmentTreeSelectComponent } from '../../../shared/components/department-tree-select/department-tree-select.component';
 
 @Component({
   selector: 'app-article-form',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DepartmentTreeSelectComponent],
   template: `
     <div class="page">
       <h1 data-testid="article-form-heading">{{ article ? 'Edit Article' : 'Create Article' }}</h1>
@@ -67,13 +68,15 @@ import { DepartmentService, Department } from '../../../core/services/department
         </div>
 
         <div class="field">
-          <label for="department">Department</label>
-          <select id="department" formControlName="department_id" data-testid="article-department">
-            <option [ngValue]="null">None</option>
-            @for (dept of departments; track dept.id) {
-              <option [ngValue]="dept.id">{{ dept.name }}</option>
-            }
-          </select>
+          <label>Department</label>
+          <app-department-tree-select
+            formControlName="department_id"
+            [departments]="departments"
+            [orgName]="orgName"
+            [allowRoot]="false"
+            placeholder="None"
+            data-testid="article-department-select"
+          ></app-department-tree-select>
         </div>
 
         <div class="form-actions">
@@ -146,6 +149,7 @@ export class ArticleFormComponent implements OnInit {
 
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
 
@@ -160,6 +164,10 @@ export class ArticleFormComponent implements OnInit {
     status:        ['DRAFT' as 'DRAFT' | 'PUBLISHED', Validators.required],
     department_id: [null as number | null],
   });
+
+  get orgName(): string {
+    return this.authService.currentUser?.organization_name ?? 'Organization';
+  }
 
   ngOnInit(): void {
     this.departmentService.getDepartments().subscribe({
