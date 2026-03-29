@@ -9,7 +9,6 @@ import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { UsersComponent } from './features/users/users.component';
 import { DepartmentsComponent } from './features/departments/departments.component';
 import { ArticlesListComponent } from './features/articles/articles-list/articles-list.component';
-import { ArticleCreateComponent } from './features/articles/article-create/article-create.component';
 import { ArticleDetailComponent } from './features/articles/article-detail/article-detail.component';
 import { ArticleEditComponent } from './features/articles/article-edit/article-edit.component';
 
@@ -33,7 +32,6 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ORG_ADMIN'])],
       },
       { path: 'articles',          component: ArticlesListComponent },
-      { path: 'articles/new',      component: ArticleCreateComponent },
       { path: 'articles/:id',      component: ArticleDetailComponent },
       { path: 'articles/:id/edit', component: ArticleEditComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

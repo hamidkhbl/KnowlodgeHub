@@ -2,12 +2,14 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { combineLatest, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, takeUntil, startWith } from 'rxjs/operators';
 
 import { ArticleService, Article } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ArticleCreateDialogComponent } from '../article-create-dialog/article-create-dialog.component';
 
 @Component({
   selector: 'app-articles-list',
@@ -16,9 +18,9 @@ import { AuthService } from '../../../core/services/auth.service';
     <div class="page">
       <div class="page-header">
         <h1>Articles</h1>
-        <a routerLink="/articles/new" class="btn-primary" data-testid="create-article-button">
+        <button class="btn-primary" (click)="openCreateDialog()" data-testid="open-create-article">
           + Create Article
-        </a>
+        </button>
       </div>
 
       <!-- Filters -->
@@ -107,9 +109,10 @@ import { AuthService } from '../../../core/services/auth.service';
       padding: 0.5rem 1.1rem;
       background: #2563eb;
       color: #fff;
+      border: none;
       border-radius: 4px;
-      text-decoration: none;
       font-size: 0.9rem;
+      cursor: pointer;
     }
     .btn-primary:hover { background: #1d4ed8; }
 
@@ -176,6 +179,7 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
   private readonly authService = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroy$ = new Subject<void>();
 
   articles: Article[] = [];
@@ -217,6 +221,14 @@ export class ArticlesListComponent implements OnInit, OnDestroy {
         this.loading = false;
       },
     });
+  }
+
+  openCreateDialog(): void {
+    this.dialog.open(ArticleCreateDialogComponent, { width: '580px' })
+      .afterClosed()
+      .subscribe((newArticle: Article | undefined) => {
+        if (newArticle) this.articles = [newArticle, ...this.articles];
+      });
   }
 
   ngOnDestroy(): void {
