@@ -59,18 +59,29 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
             @for (article of articles; track article.id) {
               <div class="article-card" data-testid="feed-article-card">
                 <a [routerLink]="['/articles', article.id]" class="card-link">
-                  <div class="card-header">
-                    <span class="card-title">{{ article.title }}</span>
-                    @if (article.department_id) {
-                      <span class="dept-badge">{{ getDepartmentName(article.department_id) }}</span>
-                    }
+                  <div class="card-main">
+                    <div class="card-header">
+                      <span class="card-title">{{ article.title }}</span>
+                      @if (article.department_id) {
+                        <span class="dept-badge">{{ getDepartmentName(article.department_id) }}</span>
+                      }
+                    </div>
+                    <p class="card-preview">{{ preview(article.content) }}</p>
+                    <div class="card-meta">
+                      <span>{{ article.author_name }}</span>
+                      <span class="dot">·</span>
+                      <span>{{ article.created_at | date:'mediumDate' }}</span>
+                    </div>
                   </div>
-                  <p class="card-preview">{{ preview(article.content) }}</p>
-                  <div class="card-meta">
-                    <span>{{ article.author_name }}</span>
-                    <span class="dot">·</span>
-                    <span>{{ article.created_at | date:'mediumDate' }}</span>
-                  </div>
+                  @if (article.last_comment_body) {
+                    <div class="card-comment" data-testid="feed-last-comment">
+                      <svg class="comment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      <span class="comment-meta-author">{{ article.last_comment_author }}</span>
+                      <p class="comment-meta-body">{{ commentPreview(article.last_comment_body) }}</p>
+                    </div>
+                  }
                 </a>
                 <div class="card-actions">
                   <button
@@ -134,11 +145,15 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
     }
 
     .card-link {
-      display: block;
+      display: flex;
+      align-items: stretch;
+      gap: 0;
       padding: 1.25rem 1.5rem 0.75rem;
       text-decoration: none;
       color: inherit;
     }
+
+    .card-main { flex: 1; min-width: 0; }
 
     .card-header {
       display: flex;
@@ -178,6 +193,43 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
       color: #94a3b8;
     }
     .dot { color: #cbd5e1; }
+
+    /* ── Last comment panel ──────────────────────────────────────── */
+    .card-comment {
+      width: 180px;
+      flex-shrink: 0;
+      margin-left: 1.25rem;
+      padding-left: 1.25rem;
+      border-left: 1px solid #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .comment-icon {
+      width: 14px;
+      height: 14px;
+      color: #94a3b8;
+      flex-shrink: 0;
+      margin-bottom: 0.1rem;
+    }
+    .comment-meta-author {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .comment-meta-body {
+      margin: 0;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
 
     .card-actions {
       display: flex;
@@ -272,6 +324,10 @@ export class FeedComponent implements OnInit, OnDestroy {
 
   preview(content: string): string {
     return content.length > 150 ? content.slice(0, 150).trimEnd() + '…' : content;
+  }
+
+  commentPreview(body: string): string {
+    return body.length > 100 ? body.slice(0, 100).trimEnd() + '…' : body;
   }
 
   getDepartmentName(departmentId: number | null): string {

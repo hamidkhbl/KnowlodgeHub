@@ -18,6 +18,8 @@ export interface Article {
   updated_at: string;
   like_count: number;
   liked_by_current_user: boolean;
+  last_comment_body: string | null;
+  last_comment_author: string | null;
 }
 
 export interface ArticleFilters {

@@ -5,9 +5,40 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.article import Article, ArticleStatus
+from models.comment import ArticleComment
 from models.like import ArticleLike
 from models.user import User, UserRole
 from schemas.article import CreateArticleRequest, UpdateArticleRequest
+
+
+def _inject_last_comment(articles: list[Article], db: Session) -> None:
+    """Inject last_comment_body and last_comment_author into article __dict__ (batch)."""
+    if not articles:
+        return
+    ids = [a.id for a in articles]
+
+    # One query: for each article, fetch the comment with the highest id (latest)
+    subq = (
+        db.query(ArticleComment.article_id, func.max(ArticleComment.id).label("max_id"))
+        .filter(ArticleComment.article_id.in_(ids))
+        .group_by(ArticleComment.article_id)
+        .subquery()
+    )
+    latest = (
+        db.query(ArticleComment)
+        .join(subq, ArticleComment.id == subq.c.max_id)
+        .all()
+    )
+    latest_by_article = {c.article_id: c for c in latest}
+
+    for article in articles:
+        comment = latest_by_article.get(article.id)
+        if comment:
+            article.__dict__["last_comment_body"] = comment.body
+            article.__dict__["last_comment_author"] = comment.author.name
+        else:
+            article.__dict__["last_comment_body"] = None
+            article.__dict__["last_comment_author"] = None
 
 
 def _inject_like_data(articles: list[Article], current_user: User, db: Session) -> None:
@@ -75,6 +106,7 @@ def get_articles(
 
     articles = query.all()
     _inject_like_data(articles, current_user, db)
+    _inject_last_comment(articles, db)
     return articles
 
 
@@ -87,6 +119,7 @@ def get_article(article_id: int, current_user: User, db: Session) -> Article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
     _inject_like_data([article], current_user, db)
+    _inject_last_comment([article], db)
     return article
 
 

@@ -36,6 +36,8 @@ class ArticleResponse(BaseModel):
     updated_at: datetime
     like_count: int = 0
     liked_by_current_user: bool = False
+    last_comment_body: str | None = None
+    last_comment_author: str | None = None
 
     model_config = {"from_attributes": True}
 
