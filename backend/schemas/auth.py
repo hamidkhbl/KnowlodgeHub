@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from models.user import UserRole
 
@@ -47,9 +47,17 @@ class CurrentUserOut(BaseModel):
     email: str
     role: UserRole
     organization_id: int
+    organization_name: str
     department_id: int | None
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_organization_name(cls, obj):
+        if hasattr(obj, "organization") and obj.organization is not None:
+            obj.__dict__["organization_name"] = obj.organization.name
+        return obj
 
 
 # --- Top-level response schemas ---
@@ -57,7 +65,7 @@ class CurrentUserOut(BaseModel):
 class RegisterOrganizationResponse(BaseModel):
     message: str
     organization: OrganizationOut
-    user: UserOut
+    user: CurrentUserOut
     access_token: str
     token_type: str = "bearer"
 

@@ -23,6 +23,17 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables ready")
 
+    # Inline migration: add parent_department_id column if it doesn't exist
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(departments)")).fetchall()]
+        if "parent_department_id" not in columns:
+            conn.execute(text(
+                "ALTER TABLE departments ADD COLUMN parent_department_id INTEGER REFERENCES departments(id)"
+            ))
+            conn.commit()
+            logger.info("Migrated departments table: added parent_department_id column")
+
     yield
 
     logger.info("Shutting down %s", settings.app_name)

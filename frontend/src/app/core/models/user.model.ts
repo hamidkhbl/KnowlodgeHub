@@ -6,5 +6,6 @@ export interface User {
   email: string;
   role: UserRole;
   organization_id: number;
+  organization_name: string;
   department_id: number | null;
 }

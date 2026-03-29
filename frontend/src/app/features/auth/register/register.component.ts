@@ -185,7 +185,7 @@ export class RegisterComponent {
       adminEmail: value.adminEmail!,
       password: value.password!,
     }).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.router.navigate(['/feed']),
       error: (err) => {
         this.errorMessage = err.error?.detail ?? 'Registration failed. Please try again.';
         this.loading = false;

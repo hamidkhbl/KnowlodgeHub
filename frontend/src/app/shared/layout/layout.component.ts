@@ -15,6 +15,11 @@ import { AuthService } from '../../core/services/auth.service';
 
         <ul class="nav-links">
           <li>
+            <a routerLink="/feed" routerLinkActive="active" data-testid="nav-feed">
+              Feed
+            </a>
+          </li>
+          <li>
             <a routerLink="/dashboard" routerLinkActive="active" data-testid="nav-dashboard">
               Dashboard
             </a>
@@ -39,6 +44,10 @@ import { AuthService } from '../../core/services/auth.service';
         </ul>
 
         <div class="sidebar-footer">
+          <div class="user-info" data-testid="nav-user-info">
+            <span class="user-name" data-testid="nav-user-name">{{ currentUser?.name }}</span>
+            <span class="user-role" data-testid="nav-user-role">{{ currentUser?.role }}</span>
+          </div>
           <button (click)="logout()" data-testid="nav-logout">Logout</button>
         </div>
       </nav>
@@ -91,6 +100,27 @@ import { AuthService } from '../../core/services/auth.service';
       padding-top: 1rem;
       border-top: 1px solid #334155;
     }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: #0f172a;
+      border-radius: 4px;
+    }
+    .user-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .user-role {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
     .sidebar-footer button {
       width: 100%;
       padding: 0.5rem;
@@ -113,6 +143,10 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class LayoutComponent {
   private readonly authService = inject(AuthService);
+
+  get currentUser() {
+    return this.authService.currentUser;
+  }
 
   get isAdmin(): boolean {
     return this.authService.currentUser?.role === 'ORG_ADMIN';

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from core.dependencies import require_authenticated, require_org_admin
 from models.user import User
-from schemas.department import CreateDepartmentRequest, DepartmentResponse
+from schemas.department import CreateDepartmentRequest, MoveDepartmentRequest, DepartmentResponse
 from services import department_service
 
 router = APIRouter(prefix="/departments", tags=["departments"])
@@ -25,3 +25,22 @@ def create_department(
     db: Session = Depends(get_db),
 ):
     return department_service.create_department(request, current_user.organization_id, db)
+
+
+@router.delete("/{department_id}", status_code=204)
+def delete_department(
+    department_id: int,
+    current_user: User = Depends(require_org_admin),
+    db: Session = Depends(get_db),
+):
+    department_service.delete_department(department_id, current_user.organization_id, db)
+
+
+@router.patch("/{department_id}/move", response_model=DepartmentResponse)
+def move_department(
+    department_id: int,
+    request: MoveDepartmentRequest,
+    current_user: User = Depends(require_org_admin),
+    db: Session = Depends(get_db),
+):
+    return department_service.move_department(department_id, request, current_user.organization_id, db)

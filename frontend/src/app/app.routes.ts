@@ -5,6 +5,7 @@ import { roleGuard } from './core/guards/role.guard';
 import { LayoutComponent } from './shared/layout/layout.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
+import { FeedComponent } from './features/feed/feed.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { UsersComponent } from './features/users/users.component';
 import { DepartmentsComponent } from './features/departments/departments.component';
@@ -20,7 +21,8 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: 'dashboard', component: DashboardComponent },
+      { path: 'feed',        component: FeedComponent },
+      { path: 'dashboard',   component: DashboardComponent },
       {
         path: 'users',
         component: UsersComponent,
@@ -34,8 +36,8 @@ export const routes: Routes = [
       { path: 'articles',          component: ArticlesListComponent },
       { path: 'articles/:id',      component: ArticleDetailComponent },
       { path: 'articles/:id/edit', component: ArticleEditComponent },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: '', redirectTo: 'feed', pathMatch: 'full' },
     ],
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: 'feed' },
 ];
