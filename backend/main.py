@@ -8,7 +8,7 @@ from core.database import Base, engine
 from core.logging_config import setup_logging, get_logger
 from core.middleware import RequestLoggingMiddleware
 import models  # noqa: F401 — ensures all models are registered with Base
-from api.routes import auth, users, departments, articles, test
+from api.routes import auth, users, departments, articles, comments, organizations, likes, test
 
 setup_logging()
 logger = get_logger(__name__)
@@ -23,16 +23,23 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables ready")
 
-    # Inline migration: add parent_department_id column if it doesn't exist
+    # Inline migrations
     with engine.connect() as conn:
         from sqlalchemy import text
-        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(departments)")).fetchall()]
-        if "parent_department_id" not in columns:
+
+        dept_columns = [row[1] for row in conn.execute(text("PRAGMA table_info(departments)")).fetchall()]
+        if "parent_department_id" not in dept_columns:
             conn.execute(text(
                 "ALTER TABLE departments ADD COLUMN parent_department_id INTEGER REFERENCES departments(id)"
             ))
             conn.commit()
             logger.info("Migrated departments table: added parent_department_id column")
+
+        org_columns = [row[1] for row in conn.execute(text("PRAGMA table_info(organizations)")).fetchall()]
+        if "logo" not in org_columns:
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN logo TEXT"))
+            conn.commit()
+            logger.info("Migrated organizations table: added logo column")
 
     yield
 
@@ -58,6 +65,9 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(departments.router, prefix="/api")
 app.include_router(articles.router, prefix="/api")
+app.include_router(comments.router, prefix="/api")
+app.include_router(organizations.router, prefix="/api")
+app.include_router(likes.router, prefix="/api")
 app.include_router(test.router, prefix="/api")
 
 

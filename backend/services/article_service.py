@@ -1,11 +1,35 @@
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.article import Article, ArticleStatus
+from models.like import ArticleLike
 from models.user import User, UserRole
 from schemas.article import CreateArticleRequest, UpdateArticleRequest
+
+
+def _inject_like_data(articles: list[Article], current_user: User, db: Session) -> None:
+    """Inject like_count and liked_by_current_user into article __dict__ (batch, no N+1)."""
+    if not articles:
+        return
+    ids = [a.id for a in articles]
+    counts = dict(
+        db.query(ArticleLike.article_id, func.count(ArticleLike.id))
+        .filter(ArticleLike.article_id.in_(ids))
+        .group_by(ArticleLike.article_id)
+        .all()
+    )
+    liked_ids = {
+        row.article_id
+        for row in db.query(ArticleLike.article_id)
+        .filter(ArticleLike.article_id.in_(ids), ArticleLike.user_id == current_user.id)
+        .all()
+    }
+    for article in articles:
+        article.__dict__["like_count"] = counts.get(article.id, 0)
+        article.__dict__["liked_by_current_user"] = article.id in liked_ids
 
 
 def _get_article_in_org(article_id: int, organization_id: int, db: Session) -> Article:
@@ -49,7 +73,9 @@ def get_articles(
             (Article.title.ilike(like)) | (Article.content.ilike(like))
         )
 
-    return query.all()
+    articles = query.all()
+    _inject_like_data(articles, current_user, db)
+    return articles
 
 
 def get_article(article_id: int, current_user: User, db: Session) -> Article:
@@ -60,6 +86,7 @@ def get_article(article_id: int, current_user: User, db: Session) -> Article:
         if article.status != ArticleStatus.PUBLISHED and article.author_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
+    _inject_like_data([article], current_user, db)
     return article
 
 

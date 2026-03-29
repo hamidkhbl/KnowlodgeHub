@@ -8,6 +8,7 @@ import { debounceTime, distinctUntilChanged, switchMap, takeUntil, startWith } f
 import { ArticleService, Article } from '../../core/services/article.service';
 import { DepartmentService, Department } from '../../core/services/department.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LikeService } from '../../core/services/like.service';
 import { DepartmentTreeSelectComponent } from '../../shared/components/department-tree-select/department-tree-select.component';
 
 @Component({
@@ -56,24 +57,37 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
         } @else {
           <div class="article-list">
             @for (article of articles; track article.id) {
-              <a
-                [routerLink]="['/articles', article.id]"
-                class="article-card"
-                data-testid="feed-article-card"
-              >
-                <div class="card-header">
-                  <span class="card-title">{{ article.title }}</span>
-                  @if (article.department_id) {
-                    <span class="dept-badge">{{ getDepartmentName(article.department_id) }}</span>
-                  }
+              <div class="article-card" data-testid="feed-article-card">
+                <a [routerLink]="['/articles', article.id]" class="card-link">
+                  <div class="card-header">
+                    <span class="card-title">{{ article.title }}</span>
+                    @if (article.department_id) {
+                      <span class="dept-badge">{{ getDepartmentName(article.department_id) }}</span>
+                    }
+                  </div>
+                  <p class="card-preview">{{ preview(article.content) }}</p>
+                  <div class="card-meta">
+                    <span>{{ article.author_name }}</span>
+                    <span class="dot">·</span>
+                    <span>{{ article.created_at | date:'mediumDate' }}</span>
+                  </div>
+                </a>
+                <div class="card-actions">
+                  <button
+                    class="like-btn"
+                    [class.liked]="article.liked_by_current_user"
+                    [disabled]="likingId === article.id"
+                    (click)="onLikeArticle(article)"
+                    data-testid="article-like-button"
+                    [attr.aria-label]="article.liked_by_current_user ? 'Unlike' : 'Like'"
+                  >
+                    <svg class="like-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                    </svg>
+                    <span data-testid="article-like-count">{{ article.like_count }}</span>
+                  </button>
                 </div>
-                <p class="card-preview">{{ preview(article.content) }}</p>
-                <div class="card-meta">
-                  <span>{{ article.author_name }}</span>
-                  <span class="dot">·</span>
-                  <span>{{ article.created_at | date:'mediumDate' }}</span>
-                </div>
-              </a>
+              </div>
             }
           </div>
         }
@@ -108,18 +122,22 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
     .article-list { display: flex; flex-direction: column; gap: 1rem; }
 
     .article-card {
-      display: block;
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      text-decoration: none;
-      color: inherit;
+      overflow: hidden;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .article-card:hover {
       border-color: #93c5fd;
       box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+    }
+
+    .card-link {
+      display: block;
+      padding: 1.25rem 1.5rem 0.75rem;
+      text-decoration: none;
+      color: inherit;
     }
 
     .card-header {
@@ -161,6 +179,33 @@ import { DepartmentTreeSelectComponent } from '../../shared/components/departmen
     }
     .dot { color: #cbd5e1; }
 
+    .card-actions {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 1.5rem 0.75rem;
+      border-top: 1px solid #f8fafc;
+    }
+
+    .like-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      transition: color 0.12s, background 0.12s;
+    }
+    .like-btn:hover:not(:disabled) { color: #2563eb; background: #eff6ff; }
+    .like-btn.liked { color: #2563eb; }
+    .like-btn.liked .like-icon { fill: #2563eb; stroke: #2563eb; }
+    .like-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .like-icon { width: 15px; height: 15px; flex-shrink: 0; }
+
     .empty-state {
       text-align: center;
       padding: 3rem 0;
@@ -174,12 +219,14 @@ export class FeedComponent implements OnInit, OnDestroy {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
   private readonly authService = inject(AuthService);
+  private readonly likeService = inject(LikeService);
   private readonly destroy$ = new Subject<void>();
 
   articles: Article[] = [];
   departments: Department[] = [];
   loading = true;
   error: string | null = null;
+  likingId: number | null = null;
 
   searchControl = new FormControl('');
   departmentControl = new FormControl<number | null>(null);
@@ -230,5 +277,22 @@ export class FeedComponent implements OnInit, OnDestroy {
   getDepartmentName(departmentId: number | null): string {
     if (departmentId === null) return '';
     return this.departments.find(d => d.id === departmentId)?.name ?? '';
+  }
+
+  onLikeArticle(article: Article): void {
+    if (this.likingId === article.id) return;
+    this.likingId = article.id;
+    const action = article.liked_by_current_user
+      ? this.likeService.unlikeArticle(article.id)
+      : this.likeService.likeArticle(article.id);
+
+    action.subscribe({
+      next: summary => {
+        article.liked_by_current_user = summary.liked;
+        article.like_count = summary.like_count;
+        this.likingId = null;
+      },
+      error: () => { this.likingId = null; },
+    });
   }
 }

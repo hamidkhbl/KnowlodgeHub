@@ -34,6 +34,8 @@ class ArticleResponse(BaseModel):
     organization_id: int
     created_at: datetime
     updated_at: datetime
+    like_count: int = 0
+    liked_by_current_user: bool = False
 
     model_config = {"from_attributes": True}
 

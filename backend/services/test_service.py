@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from core.database import Base, engine
 from core.security import hash_password
 from models.article import Article, ArticleStatus
+from models.comment import ArticleComment
 from models.department import Department
 from models.organization import Organization
 from models.user import User, UserRole
@@ -79,25 +80,36 @@ def seed_database(db: Session) -> None:
     db.flush()
 
     # --- Articles ---
+    onboarding = Article(
+        organization_id=acme.id,
+        department_id=acme_hr.id,
+        author_id=acme_admin.id,
+        title="Employee Onboarding Guide",
+        content="This guide covers everything a new employee needs to know during onboarding.",
+        tags="onboarding,hr,policy",
+        status=ArticleStatus.PUBLISHED,
+    )
+    vpn = Article(
+        organization_id=acme.id,
+        department_id=acme_eng.id,
+        author_id=acme_manager.id,
+        title="VPN Access Setup",
+        content="Step-by-step instructions for configuring VPN access on your device.",
+        tags="vpn,it,onboarding",
+        status=ArticleStatus.PUBLISHED,
+    )
+    escalation = Article(
+        organization_id=globex.id,
+        department_id=globex_support.id,
+        author_id=globex_admin.id,
+        title="Support Escalation Process",
+        content="Guidelines for escalating support incidents to the appropriate team.",
+        tags="support,incident,process",
+        status=ArticleStatus.PUBLISHED,
+    )
     db.add_all([
-        Article(
-            organization_id=acme.id,
-            department_id=acme_hr.id,
-            author_id=acme_admin.id,
-            title="Employee Onboarding Guide",
-            content="This guide covers everything a new employee needs to know during onboarding.",
-            tags="onboarding,hr,policy",
-            status=ArticleStatus.PUBLISHED,
-        ),
-        Article(
-            organization_id=acme.id,
-            department_id=acme_eng.id,
-            author_id=acme_manager.id,
-            title="VPN Access Setup",
-            content="Step-by-step instructions for configuring VPN access on your device.",
-            tags="vpn,it,onboarding",
-            status=ArticleStatus.PUBLISHED,
-        ),
+        onboarding,
+        vpn,
         Article(
             organization_id=acme.id,
             department_id=acme_sales.id,
@@ -107,14 +119,54 @@ def seed_database(db: Session) -> None:
             tags="sales,process,q1",
             status=ArticleStatus.DRAFT,
         ),
-        Article(
+        escalation,
+    ])
+
+    db.flush()
+
+    # --- Comments (published articles only) ---
+    db.add_all([
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=onboarding.id,
+            author_id=acme_employee.id,
+            body="Really helpful guide, especially the section on benefits enrollment.",
+        ),
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=onboarding.id,
+            author_id=acme_manager.id,
+            body="We should update the IT setup section — the screenshots are outdated.",
+        ),
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=onboarding.id,
+            author_id=acme_admin.id,
+            body="Good catch, I'll update it this week.",
+        ),
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=onboarding.id,
+            author_id=acme_employee.id,
+            body="Also worth adding a link to the parking permit form.",
+        ),
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=vpn.id,
+            author_id=acme_employee.id,
+            body="Worked perfectly on macOS. Thanks!",
+        ),
+        ArticleComment(
+            organization_id=acme.id,
+            article_id=vpn.id,
+            author_id=acme_manager.id,
+            body="Windows users: make sure to run the installer as administrator.",
+        ),
+        ArticleComment(
             organization_id=globex.id,
-            department_id=globex_support.id,
-            author_id=globex_admin.id,
-            title="Support Escalation Process",
-            content="Guidelines for escalating support incidents to the appropriate team.",
-            tags="support,incident,process",
-            status=ArticleStatus.PUBLISHED,
+            article_id=escalation.id,
+            author_id=globex_employee.id,
+            body="Should we also include SLA response times here?",
         ),
     ])
 

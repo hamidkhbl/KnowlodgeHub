@@ -16,6 +16,8 @@ export interface Article {
   organization_id: number;
   created_at: string;
   updated_at: string;
+  like_count: number;
+  liked_by_current_user: boolean;
 }
 
 export interface ArticleFilters {

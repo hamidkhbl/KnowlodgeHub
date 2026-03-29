@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
+import { OrganizationService } from '../../core/services/organization.service';
 
 @Component({
   selector: 'app-layout',
@@ -11,11 +12,20 @@ import { AuthService } from '../../core/services/auth.service';
       <nav class="sidebar">
 
         <div class="sidebar-brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-          </svg>
-          <span data-testid="nav-app-title">KnowledgeHub</span>
+          @if (org?.logo) {
+            <img [src]="org!.logo" alt="logo" class="brand-logo" data-testid="nav-org-logo" />
+          } @else {
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          }
+          <div class="brand-text">
+            <span class="brand-app-name" data-testid="nav-app-title">KnowledgeHub</span>
+            @if (orgName) {
+              <span class="brand-org-name" data-testid="nav-org-name">{{ orgName }}</span>
+            }
+          </div>
         </div>
 
         <div class="nav-section">
@@ -62,6 +72,14 @@ import { AuthService } from '../../core/services/auth.service';
                   Departments
                 </a>
               </li>
+              <li>
+                <a routerLink="/settings" routerLinkActive="active" data-testid="nav-settings">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  Settings
+                </a>
+              </li>
             }
           </ul>
         </div>
@@ -106,12 +124,21 @@ import { AuthService } from '../../core/services/auth.service';
       align-items: center;
       gap: 0.625rem;
       padding: 1.125rem 1rem 1rem;
-      font-size: 0.9375rem;
-      font-weight: 700;
       color: #f8fafc;
       border-bottom: 1px solid #1e293b;
     }
     .brand-icon { width: 20px; height: 20px; color: #60a5fa; flex-shrink: 0; }
+    .brand-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; flex-shrink: 0; }
+    .brand-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .brand-app-name { font-size: 0.9375rem; font-weight: 700; color: #f8fafc; white-space: nowrap; }
+    .brand-org-name {
+      font-size: 0.6875rem;
+      color: #64748b;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     .nav-section { padding: 1rem 0.75rem 0.5rem; flex: 1; }
     .nav-label {
@@ -198,11 +225,14 @@ import { AuthService } from '../../core/services/auth.service';
     }
   `],
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly orgService = inject(OrganizationService);
 
   get currentUser() { return this.authService.currentUser; }
   get isAdmin(): boolean { return this.authService.currentUser?.role === 'ORG_ADMIN'; }
+  get orgName(): string { return this.authService.currentUser?.organization_name ?? ''; }
+  get org() { return this.orgService.org; }
 
   get userInitial(): string {
     return (this.authService.currentUser?.name ?? '?')[0].toUpperCase();
@@ -214,6 +244,10 @@ export class LayoutComponent {
     if (r === 'MANAGER')   return 'Manager';
     if (r === 'EMPLOYEE')  return 'Employee';
     return r ?? '';
+  }
+
+  ngOnInit(): void {
+    this.orgService.loadMyOrg().subscribe();
   }
 
   logout(): void { this.authService.logout(); }

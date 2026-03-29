@@ -12,6 +12,7 @@ import { DepartmentsComponent } from './features/departments/departments.compone
 import { ArticlesListComponent } from './features/articles/articles-list/articles-list.component';
 import { ArticleDetailComponent } from './features/articles/article-detail/article-detail.component';
 import { ArticleEditComponent } from './features/articles/article-edit/article-edit.component';
+import { SettingsComponent } from './features/settings/settings.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -36,6 +37,11 @@ export const routes: Routes = [
       { path: 'articles',          component: ArticlesListComponent },
       { path: 'articles/:id',      component: ArticleDetailComponent },
       { path: 'articles/:id/edit', component: ArticleEditComponent },
+      {
+        path: 'settings',
+        component: SettingsComponent,
+        canActivate: [roleGuard(['ORG_ADMIN'])],
+      },
       { path: '', redirectTo: 'feed', pathMatch: 'full' },
     ],
   },

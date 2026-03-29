@@ -5,10 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ArticleService, Article } from '../../../core/services/article.service';
 import { DepartmentService, Department } from '../../../core/services/department.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { LikeService } from '../../../core/services/like.service';
+import { ArticleCommentsComponent } from '../article-comments/article-comments.component';
 
 @Component({
   selector: 'app-article-detail',
-  imports: [CommonModule, RouterLink, DatePipe],
+  imports: [CommonModule, RouterLink, DatePipe, ArticleCommentsComponent],
   template: `
     <div class="page">
       @if (loading) {
@@ -68,6 +70,25 @@ import { AuthService } from '../../../core/services/auth.service';
         }
 
         <div class="content-body" data-testid="article-detail-content">{{ article.content }}</div>
+
+        @if (article.status === 'PUBLISHED') {
+          <div class="article-actions">
+            <button
+              class="like-btn"
+              [class.liked]="article.liked_by_current_user"
+              [disabled]="likingArticle"
+              (click)="onLikeArticle()"
+              data-testid="article-like-button"
+              [attr.aria-label]="article.liked_by_current_user ? 'Unlike' : 'Like'"
+            >
+              <svg class="like-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+              </svg>
+              <span data-testid="article-like-count">{{ article.like_count }}</span>
+            </button>
+          </div>
+          <app-article-comments [articleId]="article.id" />
+        }
       }
     </div>
   `,
@@ -150,6 +171,33 @@ import { AuthService } from '../../../core/services/auth.service';
       padding: 1.5rem;
     }
 
+    .article-actions {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 0;
+      margin-top: 0.5rem;
+    }
+
+    .like-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.4rem 0.875rem;
+      border-radius: 6px;
+      transition: color 0.12s, background 0.12s, border-color 0.12s;
+    }
+    .like-btn:hover:not(:disabled) { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
+    .like-btn.liked { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+    .like-btn.liked .like-icon { fill: #2563eb; stroke: #2563eb; }
+    .like-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .like-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
     .status-msg { color: #64748b; }
     .error-msg  { color: #dc2626; font-size: 0.9rem; }
   `],
@@ -158,6 +206,7 @@ export class ArticleDetailComponent implements OnInit {
   private readonly articleService = inject(ArticleService);
   private readonly departmentService = inject(DepartmentService);
   private readonly authService = inject(AuthService);
+  private readonly likeService = inject(LikeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -167,6 +216,7 @@ export class ArticleDetailComponent implements OnInit {
   loadError: string | null = null;
   deleting = false;
   deleteError: string | null = null;
+  likingArticle = false;
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -205,6 +255,23 @@ export class ArticleDetailComponent implements OnInit {
         this.deleteError = 'Failed to delete article.';
         this.deleting = false;
       },
+    });
+  }
+
+  onLikeArticle(): void {
+    if (!this.article || this.likingArticle) return;
+    this.likingArticle = true;
+    const action = this.article.liked_by_current_user
+      ? this.likeService.unlikeArticle(this.article.id)
+      : this.likeService.likeArticle(this.article.id);
+
+    action.subscribe({
+      next: summary => {
+        this.article!.liked_by_current_user = summary.liked;
+        this.article!.like_count = summary.like_count;
+        this.likingArticle = false;
+      },
+      error: () => { this.likingArticle = false; },
     });
   }
 
