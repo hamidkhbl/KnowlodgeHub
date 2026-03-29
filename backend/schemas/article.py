@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -30,6 +31,8 @@ class ArticleResponse(BaseModel):
     department_id: Optional[int]
     author_id: int
     organization_id: int
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
